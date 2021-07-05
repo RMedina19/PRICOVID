@@ -27,37 +27,27 @@ out <- "03_datos_limpios/"
 
 # 1. Cargar datos --------------------------------------------------------------
 
-df_raw_pre <- read_excel(paste0(inp, "PRISIÓN-COVID_2021_05_04_11_55.xlsx")) # Hasta el 4 de abril
-df_raw_cru <- read_excel(paste0(inp, "PRISIÓN-COVID_2021_01_06_09_28.xlsx"))
+df_raw_cru <- read_excel(paste0(inp, "PRISIÓN-COVID_2021_23_06_09_54.xlsx"))
 
+dim(df_raw_cru)
 
 
 # 2. Filtrar resultados --------------------------------------------------------
 
-df_raw_pre <- df_raw_pre                            %>% 
+# Datos guardados después de la caída de los servidores
+df_raw <- df_raw_cru                            %>% 
     mutate(fecha = as.Date(str_sub(Date, 1, 10)))   %>% 
-    select(SbjNum, SbjNam, Date, Duration, Upload, consentimiento:fecha)
-
-
-df_raw_cru <- df_raw_cru                            %>% 
-    mutate(fecha = as.Date(str_sub(Date, 1, 10)))   %>% 
-    filter(fecha >= "2021-04-04") %>% 
-    select(SbjNum, SbjNam, Date, Duration, Upload, consentimiento:fecha)
-
-dim(df_raw_pre)
-dim(df_raw_cru)
-
-df_raw <- df_raw_pre                                %>%
-    bind_rows(df_raw_cru)                           %>% 
-    filter(SbjNam == "campo")
+    filter(SbjNam == "campo")                       %>% 
+    select(SbjNum, SbjNam, Date, Duration, Upload, consentimiento:fecha) %>% 
+    mutate(day = str_sub(Date, 1, 10))
 
 
 # Distinguir los resultados 
-table(df_raw_pre$SbjNam)    # Base previa a la caída de los servidores
 table(df_raw_cru$SbjNam)    # Base posterior a la caída de los servidores
 table(df_raw$SbjNam)        # Base conjunta
 
 # Guardar respaldo de resultado unificados y filtrados
+# df_raw <- df_raw_cru
 df_PRICO_resultados <- df_raw
 write.csv(df_PRICO_resultados, paste0(out, "df_PRICO_resultados.csv"))
 save(df_PRICO_resultados, file = paste0(out, "df_PRICO_resultados.RData"))
@@ -65,7 +55,7 @@ save(df_PRICO_resultados, file = paste0(out, "df_PRICO_resultados.RData"))
 
 # 3. Explorar base -------------------------------------------------------------
 
-# Nombre de las variables
+# Nombres
 names(df_raw)
 
 # Respuestas abiertas
@@ -77,8 +67,5 @@ length(unique(df_raw$S_37_9))   # ¿Cómo le afectó a usted que tuviera covid?
 length(unique(df_raw$S_42_8))   # ¿Qué tipo de problemas de salud ha tenido?
 length(unique(df_raw$S_47_6))   # ¿Cómo se entera de las medidas?
 length(unique(df_raw$S_49_16))  # ¿A qué se dedica usted generalmente?
-
-
-
 
 

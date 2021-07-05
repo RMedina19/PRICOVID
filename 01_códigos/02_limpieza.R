@@ -4,7 +4,7 @@
 # Encargada:                Regina Isabel Medina Rosales
 # Contacto:                 regina.medina@alumnos.cide.edu
 # Fecha de creación:        08 de junio de 2021 
-# Fecha de actualización:   14 de junio de 2021
+# Fecha de actualización:   04 de julio de 2021
 #------------------------------------------------------------------------------#
 
 # 0. Configuración inicial -----------------------------------------------------
@@ -35,7 +35,7 @@ df_codebook_crudo <- read_excel("02_datos_crudos/codebook_final.xls")
 v_names         <- names(df_codebook_crudo)
 
 # Guardar el texto de las respuestas
-df_codebook     <- df_codebook_crudo    %>% 
+df_respuestas     <- df_codebook_crudo    %>% 
     rename(
         q_id   = v_names[2], 
         a_id   = v_names[4], 
@@ -46,6 +46,8 @@ df_codebook     <- df_codebook_crudo    %>%
         !is.na(a_id))
 
 # View(df_codebook)
+ q_tiempo_larga <- "Aproximadamente, ¿cuánto tiempo le toma llegar desde su casa hasta el centro penitenciario?las horas y minutos. Si no sabe cuánto tiempo toma el traslado o desea <u>NO</u> responder, por favor ingrese un <u>0</u> en cada campo."
+ q_tiempo_corta <- "Aproximadamente, ¿cuánto tiempo le toma llegar desde su casa hasta el centro penitenciario?"
 
 # Guardar el texto de las preguntas
 df_preguntas <- df_codebook_crudo       %>% 
@@ -72,12 +74,13 @@ df_preguntas <- df_codebook_crudo       %>%
         q_text = str_replace_all(q_text, "Por favor, marque todas las opciones que apliquen.", ""), 
         q_text = str_replace_all(q_text, "Por favor, marque todas las que apliquen.", ""), 
         q_text = str_replace_all(q_text, "Por favor indique su respuesta con número.", ""), 
-        q_text = str_replace_all(q_text, "Por favor, indique con número.", "")
-    )                                                   %>% 
+        q_text = str_replace_all(q_text, "Por favor, indique con número.", ""), 
+    )                                                   %>%
+    mutate(q_text = ifelse(q_text == q_tiempo_larga, q_tiempo_corta, q_text)) %>% 
     # Cambiar texto de consentimiento informado 
     mutate(q_text = case_when(
         q_id == 1 ~ "¿Acepta participar en esta encuesta?", 
-        T ~ q_text))                            %>% 
+        T ~ q_text))                                    %>% 
     # Preguntas que no aparecen en las respuestas
     # filter(!(q_id %in% c(6, 8, 11, 14, 17, 31, 36)))    %>% 
     filter(!(q_id %in% c(28, 40)))
@@ -85,22 +88,24 @@ df_preguntas <- df_codebook_crudo       %>%
 # Preguntas que faltan en la base:     6, 8, 11, 14, 17, 31, 36
 # Preguntas que son sólo indicaciones: 28, 40, 
 
-# View(df_preguntas)
+df_codebook <- df_respuestas                                %>% 
+    full_join(df_preguntas, by = c("q_id"))                 %>% 
+    select(q_id, q_text, a_id, a_text)
 
-# Preguntas y respuestas con códigos y texto 
-df_resultados <- df_respuestas                      %>% 
-    full_join(df_codebook,  by = c("q_id", "a_id")) %>% 
-    full_join(df_preguntas, by = c("q_id"))         %>% 
-    select(q_id, q_code, q_text, a_id, a_text, freq)
 
-# View(df_resultados)
+# Buscar disparidades
+names(df_PRICO_resultados)  # Hay 184 nombres de varialbes en la base 
+unique(df_codebook$q_id)    # Pero sólo aparecen 53 preguntas 
+
+
 
 # 3. Sintetizar y decodificar respustas ----------------------------------------
 
 # Guardar nombres de las variables de la base de resultados 
 v_names     <- names(df_PRICO_resultados)
-v_variables <- as.character(v_names[6:180])
+v_variables <- as.character(v_names[6:192])
 
+length(v_names)
 
 # 3.1. Consentimiento informado ------------------------------------------------
 
@@ -115,10 +120,8 @@ df_r1 <- df_PRICO_resultados            %>%
         names_to = "q_code")            %>% 
     mutate(q_id = 1)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
-        by = c("q_id", "a_id"))         %>% 
+        by = c("q_id", "a_id"))  %>% 
     mutate(a_text = factor(a_text, 
         levels = v_levels))             %>% 
     mutate(total = sum(freq))           %>% 
@@ -129,7 +132,7 @@ df_r1 <- df_PRICO_resultados            %>%
     ungroup() %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
-
+# View(df_r1)
 
 # 3.2. Sociodemográficos -------------------------------------------------------
 
@@ -144,8 +147,6 @@ df_r2 <- df_PRICO_resultados            %>%
         names_to = "q_code")            %>% 
     mutate(q_id = 2)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(a_text = factor(a_text, 
@@ -200,8 +201,6 @@ df_r4 <- df_PRICO_resultados            %>%
         names_to = "q_code")            %>% 
     mutate(q_id = 4)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(a_text = factor(a_text, 
@@ -225,8 +224,6 @@ df_r5 <- df_PRICO_resultados            %>%
         names_to = "q_code")            %>% 
     mutate(q_id = 5)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(a_text = factor(a_text, 
@@ -244,30 +241,36 @@ v_otros <- unique(df_PRICO_resultados$Q_5_S)
 
 
 # Prisión preventiva
-# v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 6])
-# 
-# df_r6 <- df_PRICO_resultados            %>% 
-#     group_by(prision_preventiva)        %>% 
-#     summarise(freq = n())               %>% 
-#     pivot_longer(
-#         cols = v_variables[7], 
-#         names_to = "q_code")            %>% 
-#     mutate(q_id = 6)                    %>% 
-#     rename(a_id = value)                %>% 
-#     left_join(df_preguntas, 
-#         by = "q_id")                    %>% 
-#     left_join(df_codebook, 
-#         by = c("q_id", "a_id"))         %>% 
-#     mutate(a_text = factor(a_text, 
-#         levels = v_levels))             %>% 
-    # mutate(total = sum(freq))           %>% 
-    # group_by(a_id, a_text)              %>%
-    # mutate(porcentaje = round(freq*100/total, 1), 
-    #     p_text = paste0(porcentaje, "%")) %>% 
-    # select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 6])
+
+df_r6 <- df_PRICO_resultados            %>%
+    group_by(prision_preventiva)        %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = v_variables[7],
+        names_to = "q_code")            %>%
+    mutate(q_id = 6)                    %>%
+    rename(a_id = value)                %>%
+    left_join(df_codebook,
+        by = c("q_id", "a_id"))         %>%
+    # Agregar de manera manual los valores de las respuestas porque el codebook está mal
+    mutate(
+        a_text = case_when(
+            a_id == 99 ~ "No sé / No quiero responder",
+            T ~ as.character(a_text)
+        ),
+        a_text = factor(a_text,
+            levels = v_levels)
+    ) %>% 
+    mutate(total = sum(freq))           %>%
+    group_by(a_id, a_text)              %>%
+    mutate(porcentaje = round(freq*100/total, 1),
+        p_text = paste0(porcentaje, "%")) %>%
+    ungroup() %>% 
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)
 
 
-
+# View(df_r6)
 
 # 3.3. Detención y contingencia ------------------------------------------------
 
@@ -276,7 +279,7 @@ df_r7 <- df_PRICO_resultados            %>%
     group_by(año_detencion)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[7], 
+        cols = v_variables[8], 
         names_to = "q_code")            %>% 
     mutate(q_id = 7)                    %>% 
     rename(a_id = value)                %>% 
@@ -301,27 +304,26 @@ df_r7 <- df_PRICO_resultados            %>%
 
 
 # Mes de detención 
-# v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 8])
-# 
-# df_r8 <- df_PRICO_resultados            %>% 
-#     group_by(mes_detención)             %>% 
-#     summarise(freq = n())               %>% 
-#     pivot_longer(
-#         cols = v_variables[8], 
-#         names_to = "q_code")            %>% 
-#     mutate(q_id = 8)                    %>% 
-#     rename(a_id = value)                %>% 
-#     left_join(df_preguntas, 
-#         by = "q_id")                    %>% 
-#     left_join(df_codebook, 
-#         by = c("q_id", "a_id"))         %>% 
-#     mutate(a_text = factor(a_text, 
-#         levels = v_levels))             %>% 
-    # mutate(total = sum(freq))           %>% 
-    # group_by(a_id, a_text)              %>%
-    # mutate(porcentaje = round(freq*100/total, 1), 
-    #     p_text = paste0(porcentaje, "%")) %>% 
-    # select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 8])
+
+df_r8 <- df_PRICO_resultados            %>%
+    group_by(mes_detención)             %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = v_variables[9],
+        names_to = "q_code")            %>%
+    mutate(q_id = 8)                    %>%
+    rename(a_id = value)                %>%
+    left_join(df_codebook,
+        by = c("q_id", "a_id"))         %>%
+    mutate(a_text = factor(a_text,
+        levels = v_levels))             %>%
+    mutate(total = sum(freq))           %>%
+    group_by(a_id, a_text)              %>%
+    mutate(porcentaje = round(freq*100/total, 1),
+        p_text = paste0(porcentaje, "%")) %>%
+    ungroup() %>% 
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)
 
 
 
@@ -332,12 +334,10 @@ df_r9 <- df_PRICO_resultados            %>%
     group_by(centro)                    %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[8], 
+        cols = v_variables[10], 
         names_to = "q_code")            %>% 
     mutate(q_id = 9)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(a_text = case_when(
@@ -361,12 +361,10 @@ df_r10 <- df_PRICO_resultados           %>%
     group_by(frecuencia_visita_prev)    %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[9], 
+        cols = v_variables[11], 
         names_to = "q_code")            %>% 
     mutate(q_id = 10)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -380,6 +378,70 @@ df_r10 <- df_PRICO_resultados           %>%
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
 
+
+# Razón de no visita previo a la pandemia 
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 11])
+
+# Seleccionar todas las variables
+df_no_visita <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("razon_no_visita_prev"))
+
+table(df_no_visita$razon_no_visita_prev_O1) # Aquí hay múltiples resultados
+table(df_no_visita$razon_no_visita_prev_O2) # Aquí hay tres respuestas (para 2 y 3)
+table(df_no_visita$razon_no_visita_prev_O3) # Aquí hay una respuesta para 4
+table(df_no_visita$razon_no_visita_prev_O4) # No hay respuestas
+table(df_no_visita$razon_no_visita_prev_O5) # No hay respuestas
+table(df_no_visita$razon_no_visita_prev_O6) # No hay respuestas
+
+
+# No entendía por qué había tantas columnas para la misma pregunta de opción múltiple
+
+# Hasta que hice el cruce
+table(df_no_visita$razon_no_visita_prev_O1, df_no_visita$razon_no_visita_prev_O2)
+table(df_no_visita$razon_no_visita_prev_O1, df_no_visita$razon_no_visita_prev_O3) 
+table(df_no_visita$razon_no_visita_prev_O2, df_no_visita$razon_no_visita_prev_O3) 
+
+# Lo que me está mostrando son personas que respondieron a más de una cosa 
+# La primera variable me muestra cuál fue su primera selección 
+# Las demás me muestran su segunda o tercera selección 
+
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r11_long <- df_no_visita %>%  
+    select(-c(razon_no_visita_prev_O4:razon_no_visita_prev_O6)) %>% 
+    pivot_longer(
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "razon_no_visita_prev"
+    ) %>% 
+    filter(razon_no_visita_prev != -1)
+
+# View(df_r11_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r11_long$SbjNum))          # Coincide con las 15 personas que nunca fueron
+
+
+df_r11 <- df_r11_long           %>%
+    group_by(razon_no_visita_prev)   %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "razon_no_visita_prev",
+        names_to = "q_code")            %>%
+    mutate(q_id = 11)                   %>%
+    rename(a_id = value)                %>% 
+    left_join(df_codebook, 
+        by = c("q_id", "a_id"))         %>% 
+    mutate(total = sum(freq))           %>% 
+    group_by(a_id, a_text)              %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%")) %>% 
+    ungroup() %>% 
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
+
+# View(df_r11)
+
 # table(df_PRICO_resultados$Q_11_S)
 # v_otros <- unique(df_PRICO_resultados$Q_11_S)
 
@@ -390,12 +452,10 @@ df_r12 <- df_PRICO_resultados           %>%
     group_by(frecuencia_visita_post)    %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[10], 
+        cols = v_variables[19], 
         names_to = "q_code")            %>% 
     mutate(q_id = 12)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -411,19 +471,48 @@ df_r12 <- df_PRICO_resultados           %>%
 
 
 
-# Razón de no visita 1 (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE) 
+# Razón de no visita 1 (Aquí hay más de una base igual que en razon_no_visita_prev) 
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 13])
 
-df_r13 <- df_PRICO_resultados           %>%
-    group_by(razon_no_visita_post_O1)   %>%
+# Seleccionar todas las variables
+df_no_visita <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("razon_no_visita_post"))
+
+table(df_no_visita$razon_no_visita_post_O1)  # Sí hay respuestas
+table(df_no_visita$razon_no_visita_post_O2)  # Sí hay respuestas
+table(df_no_visita$razon_no_visita_post_O3)  # Sí hay respuestas
+table(df_no_visita$razon_no_visita_post_O4)  # Sí hay respuestas
+table(df_no_visita$razon_no_visita_post_O5)  # Sí hay respuestas
+table(df_no_visita$razon_no_visita_post_O6)  # Sí hay respuestas
+table(df_no_visita$razon_no_visita_post_O7)  # Sí hay respuestas
+table(df_no_visita$razon_no_visita_post_O8)  # No hay respuestas
+table(df_no_visita$razon_no_visita_post_O9)  # No hay respuestas
+table(df_no_visita$razon_no_visita_post_O10) # No hay respuestas
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r13_long <- df_no_visita %>%  
+    select(-c(razon_no_visita_post_O8:razon_no_visita_post_O10)) %>% 
+    pivot_longer(
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "razon_no_visita_post"
+    ) %>% 
+    filter(razon_no_visita_post != -1)
+     
+# View(df_r13_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r13_long$SbjNum))          # Coincide con las 125 personas que no pudieron realizar la visita
+
+df_r13 <- df_r13_long           %>%
+    group_by(razon_no_visita_post)   %>%
     summarise(freq = n())               %>%
     pivot_longer(
-        cols = v_variables[11],
+        cols = "razon_no_visita_post",
         names_to = "q_code")            %>%
     mutate(q_id = 13)                   %>%
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -432,39 +521,87 @@ df_r13 <- df_PRICO_resultados           %>%
             a_id == 99 ~ v_levels[10], T ~ a_text),
         a_text = factor(a_text, 
             levels = c("No aplica", v_levels)))             %>% 
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
-    mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+    mutate(total = sum(freq))                               %>% 
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
+# View(df_r13)
 
 # table(df_PRICO_resultados$Q_13_S)
 # v_otros <- unique(df_PRICO_resultados$Q_13_S)
 
 
-# Motivo de cierre de centro 1:
-# df_r22 <- df_PRICO_resultados           %>% 
-#     group_by(cierre_centro_O1)          %>% 
-#     summarise(freq = n())               %>% 
-#     pivot_longer(
-#         cols = v_variables[22], 
-#         names_to = "q_code"
-#     ) %>% 
-#     mutate(q_id = NA)                   %>% 
-#     select(q_id, q_code, value, freq)
+# Motivo de cierre de centro :
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 14])
+
+# Seleccionar todas las variables
+df_cierre <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("cierre_centro"))
+
+table(df_cierre$cierre_centro_O1) # Sí hay respuestas 
+table(df_cierre$cierre_centro_O2) # Sí hay respuestas
+table(df_cierre$cierre_centro_O3) # Sí hay respuestas
+table(df_cierre$cierre_centro_O4) # Sí hay respuestas
+table(df_cierre$cierre_centro_O5) # Sí hay respuestas
+table(df_cierre$cierre_centro_O6) # Sí hay respuestas
+table(df_cierre$cierre_centro_O7) # Sí hay respuestas
+table(df_cierre$cierre_centro_O8) # No hay respuestas 
+table(df_cierre$cierre_centro_O9) # No hay respuestas
 
 
+# Debo transformar la base para juntar todas las respuestas 
+df_r14_long <- df_cierre %>%  
+    select(-c(cierre_centro_O8:cierre_centro_O9)) %>% 
+    pivot_longer(
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "cierre_centro"
+    ) %>% 
+    filter(cierre_centro != -1)
+
+# View(df_r14_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r14_long$SbjNum)) # Todas las personas de la encuesta
+
+df_r14 <- df_r14_long           %>%
+    group_by(cierre_centro)   %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "cierre_centro",
+        names_to = "q_code")            %>%
+    mutate(q_id = 14)                   %>%
+    rename(a_id = value)                %>% 
+    left_join(df_codebook, 
+        by = c("q_id", "a_id"))         %>% 
+    mutate(
+        a_text = case_when(
+            a_id == -1 ~ "No aplica",
+            a_id == 99 ~ v_levels[9], T ~ a_text),
+        a_text = factor(a_text,
+            levels = c("No aplica", v_levels)))             %>%
+    mutate(total = sum(freq))                               %>% 
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
+
+
+# View(df_r14)
 
 # Acceso a recursos
-v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 18])
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 15])
 
 df_r15 <- df_PRICO_resultados           %>% 
     group_by(acceso_recursos)           %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[31], 
+        cols = v_variables[40], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 15)                   %>% 
@@ -496,7 +633,7 @@ df_r16 <- df_PRICO_resultados           %>%
     group_by(sis_videollamada)          %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[32], 
+        cols = v_variables[41], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 16)                   %>% 
@@ -520,35 +657,97 @@ df_r16 <- df_PRICO_resultados           %>%
 
 
 # Acceso a sistema de videollamada
-# df_17 
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 17])
 
-# Cosas que provee la persona (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE) 
-v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 18])
-
-df_r18 <- df_PRICO_resultados           %>%
-    group_by(cosas_O1)                  %>%
-    summarise(freq = n())               %>%
+df_r17 <- df_PRICO_resultados           %>% 
+    group_by(sis_videollamada_acceso)          %>% 
+    summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[33],
+        cols = v_variables[42], 
         names_to = "q_code"
-    ) %>%
-    mutate(q_id = 18)                   %>%
+    ) %>% 
+    mutate(q_id = 17)                   %>% 
     rename(a_id = value)                %>% 
     left_join(df_preguntas, 
         by = "q_id")                    %>% 
+    mutate(
+        a_text = case_when(
+            a_id == -1 ~ "No aplica",    
+            a_id ==  1 ~ v_levels[1],
+            a_id ==  2 ~ v_levels[2],
+            a_id ==  99 ~ v_levels[3],
+        ), 
+        a_text = factor(a_text, 
+            levels = c("No aplica", v_levels)))  %>% 
+    mutate(total = sum(freq))           %>% 
+    group_by(a_id, a_text)              %>%
+    mutate(porcentaje = round(freq*100/total, 1), 
+        p_text = paste0(porcentaje, "%")) %>% 
+    ungroup() %>% 
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
+
+# Cosas que provee la persona 
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 18])
+
+
+# Seleccionar todas las variables
+df_cosas <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("cosas"))
+
+
+table(df_cosas$cosas_O1)
+table(df_cosas$cosas_O2)
+table(df_cosas$cosas_O3)
+table(df_cosas$cosas_O4)
+table(df_cosas$cosas_O5)
+table(df_cosas$cosas_O6)
+table(df_cosas$cosas_O7)
+table(df_cosas$cosas_O8)
+table(df_cosas$cosas_O9)
+table(df_cosas$cosas_O10)
+table(df_cosas$cosas_O11)
+table(df_cosas$cosas_O12)
+table(df_cosas$cosas_O13)
+table(df_cosas$cosas_O14) # No hay cosas
+table(df_cosas$cosas_O15) # No hay cosas
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r18_long <- df_cosas %>%  
+    select(-c(cosas_O14:cosas_O15, cosas_cambio)) %>% 
+    pivot_longer(
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "cosas"
+    ) %>% 
+    filter(cosas != -1)
+
+# View(df_r18_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r18_long$SbjNum)) # Todas las personas de la encuesta
+
+df_r18 <- df_r18_long           %>%
+    group_by(cosas)   %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "cosas",
+        names_to = "q_code")            %>%
+    mutate(q_id = 18)                   %>%
+    rename(a_id = value)                %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
         a_text = case_when(
             a_id == -1 ~ "No aplica",
             a_id == 99 ~ v_levels[15], T ~ a_text),
-        a_text = factor(a_text, 
-            levels = c("No aplica", v_levels)))             %>% 
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
-    mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+        a_text = factor(a_text,
+            levels = c("No aplica", v_levels)))             %>%
+    mutate(total = sum(freq))                               %>% 
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
 
@@ -561,7 +760,7 @@ df_r19 <- df_PRICO_resultados           %>%
     group_by(costo_cambio)              %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[48], 
+        cols = v_variables[58], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 19)                   %>% 
@@ -595,7 +794,7 @@ df_r20 <- df_PRICO_resultados           %>%
     group_by(cosas_cambio)              %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[49], 
+        cols = v_variables[59], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 20)                   %>% 
@@ -626,36 +825,53 @@ df_r20 <- df_PRICO_resultados           %>%
 # El tiempo del traslado requiere un tratamiento especial 
 # Debo sumar el número de horas con el número de minutos 
 
-# v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 21])
-# 
-# df_r21_a <- df_PRICO_resultados         %>%
-#     group_by(horas_traslado)            %>%
-#     summarise(freq = n())               %>%
-#     pivot_longer(
-#         cols = v_variables[50],
-#         names_to = "q_code"
-#     ) %>%
-#     mutate(q_id = 21)                    %>%
-#     select(q_id, q_code, value, freq)
-# 
-# df_r21_b <- df_PRICO_resultados           %>%
-#     group_by(minutos_traslado)            %>%
-#     summarise(freq = n())               %>%
-#     pivot_longer(
-#         cols = v_variables[51],
-#         names_to = "q_code"
-#     ) %>%
-#     mutate(q_id = 21)                    %>%
-#     mutate(total = sum(freq))           %>%
-#     group_by(a_id, a_text)              %>%
-#     mutate(porcentaje = round(freq*100/total, 1),
-#         p_text = paste0(porcentaje, "%")) %>%
-#         ungroup() %>% 
-#     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 21])
+
+df_r21_a <- df_PRICO_resultados             %>%
+    group_by(horas_traslado)                %>% 
+    mutate(
+        horas_traslado = as.character(horas_traslado), 
+        horas_traslado = case_when(
+            horas_traslado == "-1"   ~ "No aplica", 
+            horas_traslado == "2.59" ~ "3", 
+            T ~ horas_traslado), 
+        a_id = horas_traslado)                       %>%
+    summarise(freq = n())                   %>%
+    pivot_longer(
+        cols = v_variables[60],
+        names_to = "q_code"
+    ) %>%
+    mutate(q_id = 21)                       %>%
+    select(q_id, q_code, value, freq)
+
+df_r21_b <- df_PRICO_resultados             %>%
+    group_by(minutos_traslado)              %>%
+    summarise(freq = n())                   %>%
+    pivot_longer(
+        cols = v_variables[61],
+        names_to = "q_code"
+    ) %>%
+    mutate(q_id = 21)                       %>%
+    mutate(total = sum(freq))               %>%
+    group_by(a_id, a_text)                  %>%
+    mutate(porcentaje = round(freq*100/total, 1),
+        p_text = paste0(porcentaje, "%"))   %>%
+        ungroup() %>%
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)
 
 
-# View(df_r21_b)
+# Tomar sólo las horas de traslado
+df_r21 <- df_r21_a                      %>% 
+    left_join(df_preguntas, 
+        by = "q_id")                    %>%
+    rename(a_id = value)                %>% 
+    mutate(a_text = a_id)               %>% 
+    mutate(porcentaje = round(freq*100/sum(freq), 1),
+        p_text = paste0(porcentaje, "%")) %>%
+    ungroup() %>%
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)
 
+ # View(df_r21)
 
 
 # Cambio en el tiempo de traslado 
@@ -665,7 +881,7 @@ df_r22 <- df_PRICO_resultados           %>%
     group_by(traslado_cambio)           %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[52], 
+        cols = v_variables[62], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 22)                   %>% 
@@ -695,7 +911,7 @@ df_r23 <- df_PRICO_resultados           %>%
     group_by(gasto_visita)              %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[53], 
+        cols = v_variables[63], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 23)                   %>% 
@@ -721,7 +937,7 @@ df_r24 <- df_PRICO_resultados           %>%
     group_by(gasto_mes)                 %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[54], 
+        cols = v_variables[64], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 24)                   %>% 
@@ -742,7 +958,6 @@ df_r24 <- df_PRICO_resultados           %>%
 
 
 # Situaciones en las que ha tenido que pagar 
-
 v_topics <- unique(df_codebook$a_text[df_codebook$q_id == 25])[1:9]
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 25])[10:12]
 
@@ -751,7 +966,7 @@ df_r25_1 <- df_PRICO_resultados         %>%
     group_by(T_situaciones_pago_1)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[55], 
+        cols = v_variables[65], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 25)                   %>% 
@@ -780,7 +995,7 @@ df_r25_2 <- df_PRICO_resultados         %>%
     group_by(T_situaciones_pago_2)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[56], 
+        cols = v_variables[66], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 25)                   %>% 
@@ -806,12 +1021,11 @@ df_r25_2 <- df_PRICO_resultados         %>%
 
 
 # Darle atención médica 
-
 df_r25_3 <- df_PRICO_resultados         %>% 
     group_by(T_situaciones_pago_3)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[57], 
+        cols = v_variables[67], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 25)                   %>% 
@@ -836,12 +1050,11 @@ df_r25_3 <- df_PRICO_resultados         %>%
 
 
 # Que le toque cama al interno 
-
 df_r25_4 <- df_PRICO_resultados         %>% 
     group_by(T_situaciones_pago_4)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[58], 
+        cols = v_variables[68], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 25)                   %>% 
@@ -870,7 +1083,7 @@ df_r25_5 <- df_PRICO_resultados         %>%
     group_by(T_situaciones_pago_5)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[59], 
+        cols = v_variables[69], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 25)                   %>% 
@@ -899,7 +1112,7 @@ df_r25_6 <- df_PRICO_resultados         %>%
     group_by(T_situaciones_pago_6)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[60], 
+        cols = v_variables[70], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 25)                   %>% 
@@ -928,7 +1141,7 @@ df_r25_7 <- df_PRICO_resultados         %>%
     group_by(T_situaciones_pago_7)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[61], 
+        cols = v_variables[71], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 25)                   %>% 
@@ -957,7 +1170,7 @@ df_r25_8 <- df_PRICO_resultados         %>%
     group_by(T_situaciones_pago_8)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[62], 
+        cols = v_variables[72], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 25)                   %>% 
@@ -986,7 +1199,7 @@ df_r25_9 <- df_PRICO_resultados         %>%
     group_by(T_situaciones_pago_9)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[63], 
+        cols = v_variables[73], 
         names_to = "q_code")            %>% 
     mutate(q_id = 25)                   %>% 
     rename(a_id = value)                %>% 
@@ -1006,7 +1219,6 @@ df_r25_9 <- df_PRICO_resultados         %>%
         p_text = paste0(porcentaje, "%")) %>% 
     ungroup() %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
-
 
 
 # View(df_r25_1)
@@ -1031,7 +1243,7 @@ df_r26_1 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_1)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[64], 
+        cols = v_variables[74], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1061,7 +1273,7 @@ df_r26_2 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_2)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[65], 
+        cols = v_variables[75], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1091,7 +1303,7 @@ df_r26_3 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_3)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[66], 
+        cols = v_variables[76], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1120,7 +1332,7 @@ df_r26_4 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_4)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[67], 
+        cols = v_variables[77], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1149,7 +1361,7 @@ df_r26_5 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_5)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[68], 
+        cols = v_variables[78], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1178,7 +1390,7 @@ df_r26_6 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_6)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[69], 
+        cols = v_variables[79], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1207,7 +1419,7 @@ df_r26_7 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_7)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[70], 
+        cols = v_variables[80], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1236,7 +1448,7 @@ df_r26_8 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_8)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[71], 
+        cols = v_variables[81], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1265,7 +1477,7 @@ df_r26_9 <- df_PRICO_resultados         %>%
     group_by(T_medidas_visitas_9)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[72], 
+        cols = v_variables[82], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 26)                   %>% 
@@ -1288,9 +1500,6 @@ df_r26_9 <- df_PRICO_resultados         %>%
     ungroup() %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
-
-
-
 # View(df_r26_1)
 # View(df_r26_2)
 # View(df_r26_3)
@@ -1302,42 +1511,70 @@ df_r26_9 <- df_PRICO_resultados         %>%
 # View(df_r26_9)
 
 
+# REGRESAR AQUÍ -----
 # Medidas para personas internas (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE)
 
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 27])
 
-df_r27 <- df_PRICO_resultados           %>%
-    group_by(medidas_internos_O1)       %>%
+df_minternos <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("medidas_internos"))
+
+table(df_minternos$medidas_internos_O1)
+table(df_minternos$medidas_internos_O2)
+table(df_minternos$medidas_internos_O3)
+table(df_minternos$medidas_internos_O4)
+table(df_minternos$medidas_internos_O5)
+table(df_minternos$medidas_internos_O6)
+table(df_minternos$medidas_internos_O7)
+table(df_minternos$medidas_internos_O8)
+table(df_minternos$medidas_internos_O9)
+table(df_minternos$medidas_internos_O10)
+table(df_minternos$medidas_internos_O11) # No hay respuestas 
+table(df_minternos$medidas_internos_O12) # No hay respuestas 
+
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r27_long <- df_minternos %>%  
+    select(-c(medidas_internos_O11:medidas_internos_O12)) %>% 
+    pivot_longer(
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "medidas_internos"
+    ) %>% 
+    filter(medidas_internos != -1)
+
+# View(df_r27_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r27_long$SbjNum)) # Todas las personas de la encuesta
+
+df_r27 <- df_r27_long           %>%
+    group_by(medidas_internos)   %>%
     summarise(freq = n())               %>%
     pivot_longer(
-        cols = v_variables[73],
-        names_to = "q_code"
-    ) %>%
+        cols = "medidas_internos",
+        names_to = "q_code")            %>%
     mutate(q_id = 27)                   %>%
-    rename(a_id = value)                %>%
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
-    left_join(df_codebook,
-        by = c("q_id", "a_id"))         %>%
+    rename(a_id = value)                %>% 
+    left_join(df_codebook, 
+        by = c("q_id", "a_id"))         %>% 
     mutate(
         a_text = case_when(
-            a_id == 88 ~ v_levels[11],
-            a_id == 99 ~ v_levels[12],
+            a_id == -1 ~ "No aplica",
+            a_id == 88 ~ v_levels[11], 
+            a_id == 99 ~ v_levels[12], 
             T ~ a_text),
-        a_text = factor(a_text, levels = v_levels))             %>%
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
-    mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+        a_text = factor(a_text,
+            levels = c("No aplica", v_levels)))             %>%
+    mutate(total = sum(freq))                               %>% 
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
-# 
 # View(df_r27)
-# table(df_r27$a_id)
-# table(df_r27$a_text)
-# unique(df_r27$a_text)
-
 
 # 3.5. Salud de personas internas ----------------------------------------------
 
@@ -1350,13 +1587,11 @@ df_r29 <- df_PRICO_resultados           %>%
     group_by(confirmados_covid19)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[85], 
+        cols = v_variables[95], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 29)                   %>% 
     rename(a_id = value)                %>% 
-        left_join(df_preguntas,
-            by = "q_id")                %>%
         left_join(df_codebook,
             by = c("q_id", "a_id"))         %>%
         mutate(
@@ -1378,13 +1613,11 @@ df_r30 <- df_PRICO_resultados           %>%
     group_by(prueba_covid19)            %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[86], 
+        cols = v_variables[96], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 30)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
     left_join(df_codebook,
         by = c("q_id", "a_id"))         %>%
     mutate(
@@ -1402,6 +1635,30 @@ df_r30 <- df_PRICO_resultados           %>%
 # Pregunta 31: Le informaron sobre el resultado de la prueba
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 31])
 
+df_r31 <- df_PRICO_resultados           %>% 
+    group_by(resultado_prueba_covid19)          %>% 
+    summarise(freq = n())               %>% 
+    pivot_longer(
+        cols = v_variables[97], 
+        names_to = "q_code"
+    ) %>% 
+    mutate(q_id = 31)                    %>% 
+    rename(a_id = value)                %>% 
+    left_join(df_codebook,
+        by = c("q_id", "a_id"))         %>%
+    mutate(
+        a_text = case_when(
+            a_id == -1 ~ "No aplica", 
+            a_id == 99 ~ v_levels[3], 
+            T ~ a_text),
+        a_text = factor(a_text, levels = c("No aplica", v_levels)))             %>%
+    mutate(total = sum(freq))           %>% 
+    group_by(a_id, a_text)              %>%
+    mutate(porcentaje = round(freq*100/total, 1), 
+        p_text = paste0(porcentaje, "%")) %>% 
+    ungroup() %>% 
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
+
 
 # Síntomas covid 
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 32])
@@ -1410,13 +1667,11 @@ df_r32 <- df_PRICO_resultados           %>%
     group_by(sintomas_covid19)          %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[87], 
+        cols = v_variables[98], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 32)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
     left_join(df_codebook,
         by = c("q_id", "a_id"))         %>%
     mutate(
@@ -1438,13 +1693,11 @@ df_r33 <- df_PRICO_resultados           %>%
     group_by(informar_autoridades)      %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[88], 
+        cols = v_variables[99], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 33)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
     left_join(df_codebook,
         by = c("q_id", "a_id"))         %>%
     mutate(
@@ -1465,105 +1718,144 @@ df_r33 <- df_PRICO_resultados           %>%
 # Razón de no informar 01 (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE)
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 34])
 
-df_r34 <- df_PRICO_resultados           %>% 
-    group_by(razon_no_informar_O1)      %>% 
-    summarise(freq = n())               %>% 
+df_informar <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("razon_no_informar"))
+
+table(df_informar$razon_no_informar_O1)
+table(df_informar$razon_no_informar_O2)
+table(df_informar$razon_no_informar_O3)
+table(df_informar$razon_no_informar_O4) # No hay respuestas 
+table(df_informar$razon_no_informar_O5) # No hay respuestas
+table(df_informar$razon_no_informar_O6) # No hay respuestas
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r34_long <- df_informar %>%  
+    select(-c(razon_no_informar_O4:razon_no_informar_O6)) %>% 
     pivot_longer(
-        cols = v_variables[89], 
-        names_to = "q_code"
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "razon_no_informar"
     ) %>% 
-    mutate(q_id = 34)                   %>% 
+    filter(razon_no_informar != -1)
+
+# View(df_r34_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r34_long$SbjNum)) # Coincide con las 11 personas que no informaron
+
+df_r34 <- df_r34_long                   %>%
+    group_by(razon_no_informar)          %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "razon_no_informar",
+        names_to = "q_code")            %>%
+    mutate(q_id = 34)                   %>%
     rename(a_id = value)                %>% 
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
-    left_join(df_codebook,
-        by = c("q_id", "a_id"))         %>%
+    left_join(df_codebook, 
+        by = c("q_id", "a_id"))         %>% 
     mutate(
         a_text = case_when(
-            a_id == -1 ~ "No aplica", 
-            a_id == 99 ~ v_levels[3], T ~ a_text),
-        a_text = factor(a_text, 
-            levels = c("No aplica", v_levels)))             %>%
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
-    mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+            a_id == -1 ~ "No aplica",
+            a_id == 99 ~ v_levels[6], 
+            T ~ a_text),
+        a_text = factor(a_text,
+            levels = c("No aplica", v_levels))
+        )             %>%
+    mutate(total = sum(freq))                               %>% 
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
+# View(df_r34)
 
 table(df_PRICO_resultados$Q_34_S)
 v_otros <- unique(df_PRICO_resultados$Q_34_S)
 
 
 
-# Medidas positivas covid 01 (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE)
+# Medidas positivas covid (Necesaria la transformación de la base larga)
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 35])
 
-df_r35 <- df_PRICO_resultados               %>% 
-    group_by(medidas_positivo_covid19_O1)   %>% 
-    summarise(freq = n())                   %>% 
+
+df_mpositivo <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("medidas_positivo_covid19"))
+
+table(df_mpositivo$medidas_positivo_covid19_O1)
+table(df_mpositivo$medidas_positivo_covid19_O2)
+table(df_mpositivo$medidas_positivo_covid19_O3)
+table(df_mpositivo$medidas_positivo_covid19_O4) # No hay respuestas 
+table(df_mpositivo$medidas_positivo_covid19_O5) # No hay respuestas
+table(df_mpositivo$medidas_positivo_covid19_O6) # No hay respuestas
+table(df_mpositivo$medidas_positivo_covid19_O7) # No hay respuestas
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r35_long <- df_mpositivo %>%  
+    select(-c(medidas_positivo_covid19_O4:medidas_positivo_covid19_O7)) %>% 
     pivot_longer(
-        cols = v_variables[96], 
-        names_to = "q_code"
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "medidas_positivo_covid19"
     ) %>% 
-    mutate(q_id = 35)                    %>% 
+    filter(medidas_positivo_covid19 != -1)
+
+# View(df_r35_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r35_long$SbjNum)) 
+
+df_r35 <- df_r35_long                   %>%
+    group_by(medidas_positivo_covid19)          %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "medidas_positivo_covid19",
+        names_to = "q_code")            %>%
+    mutate(q_id = 35)                   %>%
     rename(a_id = value)                %>% 
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
-    left_join(df_codebook,
-        by = c("q_id", "a_id"))         %>%
+    left_join(df_codebook, 
+        by = c("q_id", "a_id"))         %>% 
     mutate(
         a_text = case_when(
-            a_id == -1 ~ "No aplica", 
-            a_id == 99 ~ v_levels[3], T ~ a_text),
-        a_text = factor(a_text, 
-            levels = c("No aplica", v_levels)))             %>%
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
-    mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+            a_id == -1 ~ "No aplica",
+            a_id == 99 ~ v_levels[7], 
+            T ~ a_text),
+        a_text = factor(a_text,
+            levels = c("No aplica", v_levels))
+    )             %>%
+    mutate(total = sum(freq))                               %>% 
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
+
+# View(df_r35)
 
 
 # Condiciones durante el aislamiento 
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 36])
 
-# Afectación por covid19 (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE)
-v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 37])
-
-df_r37 <- df_PRICO_resultados          %>% 
-    group_by(afectacion_covid19_O1)     %>% 
+df_r36 <- df_PRICO_resultados           %>% 
+    group_by(condiciones_aislamiento_covid19)          %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[104], 
+        cols = v_variables[115], 
         names_to = "q_code"
     ) %>% 
-    mutate(q_id = 37)                    %>% 
+    mutate(q_id = 36)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
     left_join(df_codebook,
         by = c("q_id", "a_id"))         %>%
     mutate(
         a_text = case_when(
             a_id == -1 ~ "No aplica", 
-            a_id ==  0 ~ v_levels[8], 
-            a_id ==  1 ~ v_levels[1], 
-            a_id ==  2 ~ v_levels[2], 
-            a_id ==  3 ~ v_levels[3], 
-            a_id ==  4 ~ v_levels[4], 
-            a_id ==  5 ~ v_levels[5], 
-            a_id ==  6 ~ v_levels[6], 
-            a_id ==  7 ~ v_levels[7], 
-            # a_id ==  8 ~ v_levels[], # No se codificó ningún 8, sólo un 0
-            a_id ==  9 ~ v_levels[9], 
-            a_id == 99 ~ v_levels[10], 
+            a_id == 99 ~ v_levels[3], 
             T ~ a_text),
-        a_text = factor(a_text, 
-            levels = c("No aplica", v_levels)))             %>%
+        a_text = factor(a_text, levels = c("No aplica", v_levels)))             %>%
     mutate(total = sum(freq))           %>% 
     group_by(a_id, a_text)              %>%
     mutate(porcentaje = round(freq*100/total, 1), 
@@ -1572,9 +1864,75 @@ df_r37 <- df_PRICO_resultados          %>%
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
 
-table(df_PRICO_resultados$Q_35_S)
-v_otros <- unique(df_PRICO_resultados$Q_35_S)
+# Afectación por covid19 (formato de base larga)
+v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 37])
 
+df_afecta <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("afectacion"))
+
+table(df_afecta$afectacion_covid19_O1)
+table(df_afecta$afectacion_covid19_O2)
+table(df_afecta$afectacion_covid19_O3)
+table(df_afecta$afectacion_covid19_O4)
+table(df_afecta$afectacion_covid19_O5)
+table(df_afecta$afectacion_covid19_O6)
+table(df_afecta$afectacion_covid19_O7)
+table(df_afecta$afectacion_covid19_O8)
+table(df_afecta$afectacion_covid19_O9)  # No hay respuesta
+table(df_afecta$afectacion_covid19_O10) # No hay respuesta
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r37_long <- df_afecta %>%  
+    select(-c(afectacion_covid19_O9:afectacion_covid19_O10)) %>% 
+    pivot_longer(
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "afectacion_covid19"
+    ) %>% 
+    filter(afectacion_covid19 != -1)
+
+# View(df_r37_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r37_long$SbjNum)) 
+
+df_r37 <- df_r37_long                   %>%
+    group_by(afectacion_covid19)          %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "afectacion_covid19",
+        names_to = "q_code")            %>%
+    mutate(q_id = 37)                   %>%
+    rename(a_id = value)                %>% 
+    left_join(df_codebook, 
+        by = c("q_id", "a_id"))         %>% 
+    mutate(
+            a_text = case_when(
+                a_id == -1 ~ "No aplica", 
+                a_id ==  0 ~ v_levels[8], 
+                a_id ==  1 ~ v_levels[1], 
+                a_id ==  2 ~ v_levels[2], 
+                a_id ==  3 ~ v_levels[3], 
+                a_id ==  4 ~ v_levels[4], 
+                a_id ==  5 ~ v_levels[5], 
+                a_id ==  6 ~ v_levels[6], 
+                a_id ==  7 ~ v_levels[7], 
+                # a_id ==  8 ~ v_levels[], # No se codificó ningún 8, sólo un 0
+                a_id ==  9 ~ v_levels[9], 
+                a_id == 99 ~ v_levels[10], 
+                T ~ a_text),
+            a_text = factor(a_text,
+            levels = c("No aplica", v_levels))
+    )             %>%
+    mutate(total = sum(freq))                               %>% 
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
+    select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
+
+# View(df_r37)
 
 # Servicio médico 
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 38])
@@ -1583,13 +1941,11 @@ df_r38 <- df_PRICO_resultados           %>%
     group_by(servicio_medico)           %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[115], 
+        cols = v_variables[127], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 38)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
     left_join(df_codebook,
         by = c("q_id", "a_id"))         %>%
     mutate(
@@ -1619,7 +1975,7 @@ df_r39_1 <- df_PRICO_resultados         %>%
     group_by(T_acceso_justicia_1)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[116], 
+        cols = v_variables[128], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 39)                   %>% 
@@ -1648,7 +2004,7 @@ df_r39_2 <- df_PRICO_resultados         %>%
     group_by(T_acceso_justicia_2)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[117], 
+        cols = v_variables[129], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 39)                   %>% 
@@ -1677,7 +2033,7 @@ df_r39_3 <- df_PRICO_resultados         %>%
     group_by(T_acceso_justicia_3)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[118], 
+        cols = v_variables[130], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 39)                   %>% 
@@ -1707,7 +2063,7 @@ df_r39_4 <- df_PRICO_resultados         %>%
     group_by(T_acceso_justicia_4)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[119], 
+        cols = v_variables[131], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 39)                   %>% 
@@ -1737,7 +2093,7 @@ df_r39_5 <- df_PRICO_resultados         %>%
     group_by(T_acceso_justicia_5)       %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[120], 
+        cols = v_variables[132], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 39)                   %>% 
@@ -1780,7 +2136,7 @@ df_r41_1 <- df_PRICO_resultados         %>%
     group_by(T_problemas_1)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[121], 
+        cols = v_variables[133], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 41)                   %>% 
@@ -1809,7 +2165,7 @@ df_r41_2 <- df_PRICO_resultados         %>%
     group_by(T_problemas_2)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[122], 
+        cols = v_variables[134], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 41)                   %>% 
@@ -1838,7 +2194,7 @@ df_r41_3 <- df_PRICO_resultados         %>%
     group_by(T_problemas_3)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[123], 
+        cols = v_variables[135], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 41)                   %>% 
@@ -1868,7 +2224,7 @@ df_r41_4 <- df_PRICO_resultados         %>%
     group_by(T_problemas_4)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[124], 
+        cols = v_variables[136], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 41)                   %>% 
@@ -1898,7 +2254,7 @@ df_r41_5 <- df_PRICO_resultados         %>%
     group_by(T_problemas_5)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[125], 
+        cols = v_variables[137], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 41)                   %>% 
@@ -1927,7 +2283,7 @@ df_r41_6 <- df_PRICO_resultados         %>%
     group_by(T_problemas_6)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[126], 
+        cols = v_variables[138], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 41)                   %>% 
@@ -1956,7 +2312,7 @@ df_r41_7 <- df_PRICO_resultados         %>%
     group_by(T_problemas_7)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[127], 
+        cols = v_variables[139], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 41)                   %>% 
@@ -1986,7 +2342,7 @@ df_r41_8 <- df_PRICO_resultados         %>%
     group_by(T_problemas_8)             %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[128], 
+        cols = v_variables[140], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 41)                   %>% 
@@ -2021,36 +2377,58 @@ df_r41_8 <- df_PRICO_resultados         %>%
 
 
 
-# Problema  de salud (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE)
+# Problema  de salud (Transformación a formato largo)
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 42])
 
-df_r42 <- df_PRICO_resultados           %>% 
-    group_by(problemas_salud_O1)        %>% 
-    summarise(freq = n())               %>% 
+df_salud <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("problemas_salud"))
+
+table(df_salud$problemas_salud_O1)
+table(df_salud$problemas_salud_O2)
+table(df_salud$problemas_salud_O3)
+table(df_salud$problemas_salud_O4)
+table(df_salud$problemas_salud_O5)
+table(df_salud$problemas_salud_O6)
+table(df_salud$problemas_salud_O7) # No hay respuesta 
+table(df_salud$problemas_salud_O8) # No hay respuesta
+table(df_salud$problemas_salud_O9) # No hay respuesta
+
+ # Debo transformar la base para juntar todas las respuestas 
+df_r42_long <- df_salud %>%  
+    select(-c(problemas_salud_O7:problemas_salud_O9)) %>% 
     pivot_longer(
-        cols = v_variables[129], 
-        names_to = "q_code"
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "problemas_salud"
     ) %>% 
-    mutate(q_id = 42)                   %>% 
+    filter(problemas_salud != -1)
+
+# View(df_r42_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r42_long$SbjNum)) 
+
+df_r42 <- df_r42_long                   %>%
+    group_by(problemas_salud)          %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "problemas_salud",
+        names_to = "q_code")            %>%
+    mutate(q_id = 42)                   %>%
     rename(a_id = value)                %>% 
-    left_join(df_preguntas,
-        by = "q_id")                    %>%
-    left_join(df_codebook,
-        by = c("q_id", "a_id"))         %>%
-    mutate(
-        a_text = case_when(
-            a_id == -1 ~ "No aplica", 
-            a_id == 99 ~ v_levels[9], 
-            T ~ a_text),
-        a_text = factor(a_text, 
-            levels = c("No aplica", v_levels)))             %>%
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
-    mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+    left_join(df_codebook, 
+        by = c("q_id", "a_id"))         %>% 
+    mutate(total = sum(freq))                               %>% 
+    mutate(a_text = ifelse(a_id == 99, "No aplica", a_text), 
+        a_text = factor(a_text, levels = c("No aplica", v_levels))) %>% 
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
+# View(df_r42)
 
 table(df_PRICO_resultados$Q_42_S)
 v_otros <- unique(df_PRICO_resultados$Q_42_S)
@@ -2063,13 +2441,11 @@ df_r43 <- df_PRICO_resultados          %>%
     group_by(problemas_cambio)          %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[139], 
+        cols = v_variables[151], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 43)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -2087,7 +2463,6 @@ df_r43 <- df_PRICO_resultados          %>%
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
 
-
 # Cambio en obtener información 
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 44])
 
@@ -2095,13 +2470,11 @@ df_r44 <- df_PRICO_resultados          %>%
     group_by(info_cambio)               %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[140],
+        cols = v_variables[152],
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 44)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -2127,13 +2500,11 @@ df_r45 <- df_PRICO_resultados           %>%
     group_by(corrupcion_cambio)         %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[141], 
+        cols = v_variables[153], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 45)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -2162,13 +2533,11 @@ df_r46 <- df_PRICO_resultados          %>%
     group_by(info_salud)               %>% 
     summarise(freq = n())              %>% 
     pivot_longer(
-        cols = v_variables[142], 
+        cols = v_variables[154], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 46)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -2187,36 +2556,56 @@ df_r46 <- df_PRICO_resultados          %>%
 
 
 
-# Medios (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE) 
+# Medios (Tranformación de base formato long) 
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 47])
 
-df_r47 <- df_PRICO_resultados           %>% 
-    group_by(medios_O1)                 %>% 
-    summarise(freq = n())               %>% 
+df_medios <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("medios"))
+
+table(df_medios$medios_O1)
+table(df_medios$medios_O2)
+table(df_medios$medios_O3)
+table(df_medios$medios_O4)
+table(df_medios$medios_O5)
+table(df_medios$medios_O6) # No hay respuesta
+table(df_medios$medios_O7) # No hay respuesta
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r47_long <- df_medios %>%  
+    select(-c(medios_O6:medios_O7)) %>% 
     pivot_longer(
-        cols = v_variables[143], 
-        names_to = "q_code"
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "medios"
     ) %>% 
-    mutate(q_id = 47)                   %>% 
+    filter(medios != -1)
+
+# View(df_r47_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r47_long$SbjNum)) # Toda la encuesta
+
+df_r47 <- df_r47_long                   %>%
+    group_by(medios)          %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "medios",
+        names_to = "q_code")            %>%
+    mutate(q_id = 47)                   %>%
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
-    mutate(
-        a_text = case_when(
-            a_id == -1 ~ "No aplica", 
-            a_id == 99 ~ v_levels[3], 
-            T ~ a_text),
-        a_text = factor(a_text, 
-            levels = v_levels))         %>% 
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
-    mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+    mutate(total = sum(freq))                               %>% 
+    mutate(a_text = ifelse(a_id == 99, "No aplica", a_text),
+        a_text = factor(a_text, levels = c("No aplica", v_levels))) %>%
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
+# View(df_r47)
 
 
 # 3.7. Ocupación del familiar --------------------------------------------------
@@ -2228,13 +2617,11 @@ df_r48 <- df_PRICO_resultados           %>%
     group_by(hijos)                     %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[151], 
+        cols = v_variables[163], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 48)                   %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -2252,38 +2639,67 @@ df_r48 <- df_PRICO_resultados           %>%
 
 
 
-# Ocupación (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE) 
+# Ocupación (Convertir a formato largo) 
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 49])
 
-df_r49 <- df_PRICO_resultados           %>% 
-    group_by(ocupacion_O1)              %>% 
-    summarise(freq = n())               %>% 
+df_ocupa <- df_PRICO_resultados %>% 
+    select(SbjNum, starts_with("ocupacion"))
+
+table(df_ocupa$ocupacion_O1)
+table(df_ocupa$ocupacion_O2)
+table(df_ocupa$ocupacion_O3)
+table(df_ocupa$ocupacion_O4)
+table(df_ocupa$ocupacion_O5) # A partir de aquí no hay respuesta
+table(df_ocupa$ocupacion_O6)
+table(df_ocupa$ocupacion_O7)
+table(df_ocupa$ocupacion_O8)
+table(df_ocupa$ocupacion_O9)
+table(df_ocupa$ocupacion_O10)
+table(df_ocupa$ocupacion_O11)
+table(df_ocupa$ocupacion_O12)
+table(df_ocupa$ocupacion_O13)
+table(df_ocupa$ocupacion_O14)
+table(df_ocupa$ocupacion_O15)
+table(df_ocupa$ocupacion_O16)
+table(df_ocupa$ocupacion_O17)
+
+
+# Debo transformar la base para juntar todas las respuestas 
+df_r49_long <- df_ocupa %>%  
+    select(-c(ocupacion_O5:ocupacion_O17)) %>% 
     pivot_longer(
-        cols = v_variables[152], 
-        names_to = "q_code"
+        cols      = -SbjNum, 
+        names_to  = "pregunta", 
+        values_to = "ocupacion"
     ) %>% 
-    mutate(q_id = 49)                   %>% 
+    filter(ocupacion != -1)
+
+# View(df_r49_long)
+
+# Revisar que siga el mismo número de identificadores únicos
+length(unique(df_PRICO_resultados$SbjNum))
+v_obs <- length(unique(df_r49_long$SbjNum)) # Toda la encuesta
+
+df_r49 <- df_r49_long                   %>%
+    group_by(ocupacion)          %>%
+    summarise(freq = n())               %>%
+    pivot_longer(
+        cols = "ocupacion",
+        names_to = "q_code")            %>%
+    mutate(q_id = 49)                   %>%
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
-    mutate(
-        a_text = case_when(
-            a_id == -1 ~ "No aplica", 
-            a_id == 99 ~ v_levels[17], 
-            T ~ a_text),
-        a_text = factor(a_text, 
-            levels = v_levels))         %>% 
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
-    mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+    mutate(total = sum(freq))                               %>% 
+    mutate(a_text = ifelse(a_id == 99, "No aplica", a_text),
+        a_text = factor(a_text, levels = c("No aplica", v_levels))) %>%
+    group_by(a_id, a_text)                                  %>%
+    mutate(porcentaje = round(freq*100/v_obs, 1), 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
-
-
+# View(df_r49)
 table(df_PRICO_resultados$Q_49_S)
 v_otros <- unique(df_PRICO_resultados$Q_49_S)
 
@@ -2295,13 +2711,11 @@ df_r50 <- df_PRICO_resultados          %>%
     group_by(trabajo)                   %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[170], 
+        cols = v_variables[182], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 50)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -2319,8 +2733,6 @@ df_r50 <- df_PRICO_resultados          %>%
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
 
-
-
 # Razón de no trabajar
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 51])
 
@@ -2328,13 +2740,11 @@ df_r51 <- df_PRICO_resultados          %>%
     group_by(razon_sin_trabajo)         %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[171], 
+        cols = v_variables[183], 
         names_to = "q_code"
     ) %>% 
     mutate(q_id = 51)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -2363,12 +2773,10 @@ df_r52 <- df_PRICO_resultados          %>%
     group_by(ingresos)                  %>% 
     summarise(freq = n())               %>% 
     pivot_longer(
-        cols = v_variables[173], 
+        cols = v_variables[185], 
         names_to = "q_code") %>% 
     mutate(q_id = 52)                    %>% 
     rename(a_id = value)                %>% 
-    left_join(df_preguntas, 
-        by = "q_id")                    %>% 
     left_join(df_codebook, 
         by = c("q_id", "a_id"))         %>% 
     mutate(
@@ -2399,24 +2807,23 @@ v_otros <- unique(df_PRICO_resultados$Q_53_S)
 # 4. Unificar bases ------------------------------------------------------------
 
 # Preguntas que son sólo indicaciones: 28, 40, 
-# Preguntas que faltan en la base:     6, 8, 11, 14, 17, 31, 36
-
+# Preguntas que faltaban en la base:   6, 8, 11, 14, 17, 31, 36
 
 df_unida <- rbind(
     df_r1,   df_r2,   df_r3,   df_r4,   df_r5,   
-    # df_r6,   
+    df_r6,
     df_r7,   
-    # df_r8,   
+    df_r8,
     df_r9, 
     df_r10, 
-    # df_r11, 
+    df_r11,
     df_r12, df_r13, 
-    # df_r14, 
+    df_r14,
     df_r15, df_r16, 
-    # df_r17, 
+    df_r17,
     df_r18, df_r19, 
     df_r20,  
-    # df_r21, # Tiempo de traslado: necesita tratamiento especial
+    df_r21, # Tiempo de traslado: necesita tratamiento especial
     df_r22,  df_r23,  df_r24,  
     df_r25_1,
     df_r25_2,
@@ -2440,9 +2847,9 @@ df_unida <- rbind(
     # df_r28, # No es pregunta, son instrucciones
     df_r29, 
     df_r30,  
-    # df_r31,
+    df_r31,
     df_r32,  df_r33,  df_r34,  df_r35, 
-    # df_r36,  
+    df_r36,
     df_r37,  df_r38,  
     df_r39_1,
     df_r39_2,

@@ -13,7 +13,7 @@ rm(list=ls())
 
 # Cargar librerías 
 require(pacman)
-p_load(readxl, tidyverse, tidyr, stringr, srvyr)
+p_load(readxl, tidyverse, tidyr, stringr, scales)
 
 # Dirección 
 inp <- "03_datos_limpios/"
@@ -65,7 +65,8 @@ ggplot(df_var,
         # plot.title = element_text(size=800/nchar(n_title), hjust=0.5)
         ) +
     # scale_x_discrete(labels = str_wrap(unique(df_var$a_text), width = 10)) +
-    scale_x_discrete(labels = function(a_text) str_wrap(a_text, width = 10)) 
+    # scale_x_discrete(labels = function(a_text) str_wrap(a_text, width = 10)) +
+    scale_x_discrete(labels = wrap_format(10)) 
 
 
 # 2.2. Ejecución del bucle -----------------------------------------------------
@@ -98,7 +99,7 @@ for(i in 1:length(v_vars)){
         guides(fill = "none")+
         theme(
             axis.text.x = element_text(angle = 0)) +
-    scale_x_discrete(labels = function(a_text) str_wrap(a_text, width = 10)) 
+    scale_x_discrete(labels = wrap_format(10))
     
     ggsave(p, file = paste0(out, i, "-", n_qcode, ".png"))
 }
