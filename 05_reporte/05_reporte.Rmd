@@ -64,13 +64,15 @@ v_capt  <- "Fuente: Elaboración propia con datos de la encuesta PRICOVID del CI
 
 \newpage
 
-# Descripción general 
+# Descripción general y nota metodológica 
 
-El presente reporte incluye los resultados de la encuesta PRICOVID, la cual fue diseñada, programada, implementada y procesada por el Programa de Políticas de Drogas del Centro de Investigación y Docencia Económicas (CIDE-PPD). La encuesta se dirigió a personas que tuvieran algún familiar privado de su libertad en un centro penitenciario mexicano. El formulario se difundió en línea entre y el 18 de febrero y el 31 de mayo de 2021. Durante el periodo de levantamiento, se recabaron `r dim(df_PRICO_resultados)[1]` respuestas. 
+La encuesta PRICOVID fue diseñada, programada, implementada y procesada por el Programa de Políticas de Drogas del Centro de Investigación y Docencia Económicas (CIDE-PPD). La encuesta fue conformada por un total de 77 preguntas y fue programada usando SurveyToGo. Debido a las medidas de distanciamiento social, implementadas como respuesta a la crisis sanitaria provocada por el Covid-19, la encuesta fue levantada en línea. Para lograrlo, se generó un hipervínculo de acceso directo al formulario en línea de la encuesta. Dicha liga fue difundida por medio de redes sociales y alianzas estratégicas para llegar a la población objetivo: personas mayores de edad que tengan algún familiar privado o privada de su libertad en un centro penitenciario mexicano. El hipervínculo estuvo activo del 8 de febrero y el 30 de mayo de 2021. Vale la pena señalar que durante que no fue posible recopilar respuestas entre los días 7 y 9 de abril debido a una caída de los servidores de la compañía SurveyToGo. La caída implicó que el formulario estuviera inhabilitado, por lo que las personas a encuestar no tuvieron acceso a él en ese periodo. De igual manera, hubo una pérdida temporal de las encuestas que se habían recopilado en los días previos a la caída de los servidores, aunque dicha información pudo recuperarse gracias a las gestiones posteriores de la propia empresa y a los respaldos parciales que el equipo de investigación había realizado. En total, se recopilaron  `r dim(df_PRICO_resultados)[1]` respuestas durante todo el periodo de levantamiento. 
 
-Las preguntas de la encuesta contemplaban aspectos sociodemográficos, patrones de visitas y cuidados, medidas sanitarias implementadas por los centros penitenciarios ante la llegada del COVID-19, cambios en la experiencia de las personas y sus familiares derivadas de la pandemia, así como los efectos ocasionados por éstos. 
+Una vez cerrado el proceso de levantamiento, las  `r dim(df_PRICO_resultados)[1]` respuestas de la encuesta fueron limpiadas y procesadas en R. Para cada pregunta se generó una tabla y una gráfica con sus respectivas estadísticas descriptivas. También se recopilaron las respuestas de preguntas abiertas, para tomar en cuenta cualquier comentario que las personas participantes quisieran compartir. En aras de promover la transparencia y la reproducibilidad de la ciencia, se creó un repositorio público de GitHub donde se encuentran los datos crudos de las  `r dim(df_PRICO_resultados)[1]` respuestas, generados con SurveyToGo, los códigos de procesamiento en R, las gráficas descriptivas de cada pregunta y el reporte con tablas de estadística descriptiva de dicho proyecto. El repositorio está disponible en https://github.com/RMedina19/PRICOVID.    
 
-A continuación, se presentan los resultados de cada pregunta.
+El presente reporte incluye los resultados de la encuesta PRICOVID, las preguntas de la encuesta contemplaban aspectos sociodemográficos, patrones de visitas y cuidados, medidas sanitarias implementadas por los centros penitenciarios ante la llegada del COVID-19, cambios en la experiencia de las personas y sus familiares derivadas de la pandemia, así como los efectos ocasionados por éstos. A continuación, se presentan los resultados de cada pregunta.
+
+
 
 \newpage
 
