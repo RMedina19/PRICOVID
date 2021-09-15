@@ -1706,11 +1706,11 @@ df_r33 <- df_PRICO_resultados           %>%
             a_id == 99 ~ v_levels[3], T ~ a_text),
         a_text = factor(a_text, 
             levels = c("No aplica", v_levels)))             %>%
-    mutate(total = sum(freq))           %>% 
-    group_by(a_id, a_text)              %>%
+    mutate(total = sum(freq))                               %>% 
+    group_by(a_id, a_text)                                  %>%
     mutate(porcentaje = round(freq*100/total, 1), 
-        p_text = paste0(porcentaje, "%")) %>% 
-    ungroup() %>% 
+        p_text = paste0(porcentaje, "%"))                   %>% 
+    ungroup()                                               %>% 
     select(q_id, q_code, q_text, a_id, a_text, freq, porcentaje, p_text)   
 
 
@@ -1718,7 +1718,7 @@ df_r33 <- df_PRICO_resultados           %>%
 # Razón de no informar 01 (PENDIENTE VER POR QUÉ HAY MÁS DE UNA BASE)
 v_levels <- unique(df_codebook$a_text[df_codebook$q_id == 34])
 
-df_informar <- df_PRICO_resultados %>% 
+df_informar <- df_PRICO_resultados                          %>% 
     select(SbjNum, starts_with("razon_no_informar"))
 
 table(df_informar$razon_no_informar_O1)
@@ -1730,7 +1730,7 @@ table(df_informar$razon_no_informar_O6) # No hay respuestas
 
 # Debo transformar la base para juntar todas las respuestas 
 df_r34_long <- df_informar %>%  
-    select(-c(razon_no_informar_O4:razon_no_informar_O6)) %>% 
+    select(-c(razon_no_informar_O4:razon_no_informar_O6))   %>% 
     pivot_longer(
         cols      = -SbjNum, 
         names_to  = "pregunta", 
@@ -1745,7 +1745,7 @@ length(unique(df_PRICO_resultados$SbjNum))
 v_obs <- length(unique(df_r34_long$SbjNum)) # Coincide con las 11 personas que no informaron
 
 df_r34 <- df_r34_long                   %>%
-    group_by(razon_no_informar)          %>%
+    group_by(razon_no_informar)         %>%
     summarise(freq = n())               %>%
     pivot_longer(
         cols = "razon_no_informar",
@@ -1808,7 +1808,7 @@ length(unique(df_PRICO_resultados$SbjNum))
 v_obs <- length(unique(df_r35_long$SbjNum)) 
 
 df_r35 <- df_r35_long                   %>%
-    group_by(medidas_positivo_covid19)          %>%
+    group_by(medidas_positivo_covid19)  %>%
     summarise(freq = n())               %>%
     pivot_longer(
         cols = "medidas_positivo_covid19",

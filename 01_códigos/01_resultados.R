@@ -35,7 +35,7 @@ dim(df_raw_cru)
 # 2. Filtrar resultados --------------------------------------------------------
 
 # Datos guardados después de la caída de los servidores
-df_raw <- df_raw_cru                            %>% 
+df_raw <- df_raw_cru                                %>% 
     mutate(fecha = as.Date(str_sub(Date, 1, 10)))   %>% 
     filter(SbjNam == "campo")                       %>% 
     select(SbjNum, SbjNam, Date, Duration, Upload, consentimiento:fecha) %>% 
